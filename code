@@ -1,0 +1,81 @@
+import requests
+from bs4 import BeautifulSoup as BS
+from selenium import webdriver
+import time 
+import sqlite3
+
+def geturl(url):
+    '''
+    获取不同月份的URL的后半段
+    '''
+    ulist = []
+    try:
+        r = requests.get(url,timeout = 30)
+        soup = BS(r.text,'lxml')
+        a = soup.select('ul.unstyled1 a')
+        for i in a:
+            ulist.append(i.get('href'))
+        #print(ulist)
+        return ulist
+    except:
+        print('error')
+        return ulist
+
+def getdata(list):
+    '''
+    解析不同月份的数据
+    '''
+    starturl = 'https://www.aqistudy.cn/historydata/'
+    browser = webdriver.Chrome()
+    browser.maximize_window()
+    info = []
+    for i in list:
+        url = starturl + str(i)
+        try:
+            browser.get(url)
+            time.sleep(1)
+            # 获取html
+            html = browser.page_source
+            html = BS(html,'lxml')
+            for i in html.select('table tbody td'):
+                info.append(i.string)
+            #print(info[:100])
+        except:
+            print('a error')
+    browser.quit() 
+    #print(info)
+    return info
+     
+def savetosqlite(list):
+    
+    conn =sqlite3.connect(r'D:\Paperwork\PythonData\test.db')
+    sql ='create table zhengzhou_air (date datetime UNIQUE,AQI integer,quality_grade text,PM2。5 integer,PM10 integer,SO2 integer,CO REAL,NO2 integer,O3_8h integer)'
+    cur = conn.cursor()
+    
+    cur.execute(sql)
+    print('create table')
+    
+    lt = []
+    i=0
+    while i < len(list):
+        lt.append(tuple(list[i:i+9]))
+        i = i + 9       
+    
+    for i in range(len(lt)):
+        cur.execute('INSERT INTO zhengzhou_air VALUES(?,?,?,?,?,?,?,?,?)', lt[i])
+    
+    print('Insert data')
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    print('Done')
+
+def main():
+    city = '郑州'
+    url = r'https://www.aqistudy.cn/historydata/monthdata.php?city='+ str(city)
+    
+    savetosqlite(getdata(geturl(url)))
+    
+main()   
