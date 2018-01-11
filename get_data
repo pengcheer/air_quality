@@ -75,7 +75,7 @@ def savetosqlite(list):
 def main():
     city = '郑州'
     url = r'https://www.aqistudy.cn/historydata/monthdata.php?city='+ str(city)
-    
+  
     savetosqlite(getdata(geturl(url)))
     
 main()   
