@@ -1,0 +1,76 @@
+import sqlite3
+import pandas as pd
+from pyecharts import Bar,Pie
+
+def read_sql():
+   
+    conn = sqlite3.connect(r'D:\Paperwork\PythonData\test.db')
+    cur = conn.cursor()
+    data =[]
+    cur.execute('select * from zhengzhou_air;')
+    result = cur.fetchall()
+    for row in result:
+        data.append(row)
+    cur.execute('pragma table_info(zhengzhou_air);')
+    head =[i[1] for i in cur.fetchall()]
+    conn.commit()#提交
+    #关闭数据库连接
+    cur.close()
+    conn.close()
+    return data,head
+
+
+def draw_Pie(data,head):
+    '''
+    年份（2013-2017）
+    '''
+    df = pd.DataFrame(data,columns = head)
+    
+    #将date的字符串格式改为日期格式，并将其设置为索引
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date',inplace = True)
+    
+    #绘制饼图
+    ps = pd.Series(df['quality_grade'])
+    print('-------------获取2017年空气质量天数----------------\n')
+    print('',ps['2017'].groupby(df['quality_grade']).count())#将ps中2017年的数据按quality_grade分组聚合并计算各组数目
+    
+    attr = list(ps['2017'].groupby(df['quality_grade']).count().index)
+    v1 =  [int(i) for i in ps['2017'].groupby(df['quality_grade']).count().values]
+    pie = Pie("2017年苏州空气质量")
+    pie.add("", attr, v1, is_label_show=True)
+    print('Done')
+    pie.render()
+    
+def draw_Bar(data,head):
+    '''
+    年份（2013-2017）
+    '''
+    df = pd.DataFrame(data,columns = head)
+    
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date',inplace = True)
+    
+    #绘制柱状图
+    bs = pd.Series(df['AQI'],index = df.index)
+    
+    print('-------------获取2016,2017年月平均AQI数据----------------\n')
+    print('****2016年月平均AQI****\n',bs['2016'].resample('M').mean())#将bs中2016年数据按月末整理并计算月平均值
+    print('\n****2017年月平均AQI****\n',bs ['2017'].resample('M').mean())
+    
+    attr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    #将s中的某年的数据按月份求平均值并转化为1位小数
+    v1 = [round(i,1) for i in bs['2016'].resample('M').mean().values]
+    v2 = [round(i,1) for i in bs['2017'].resample('M').mean().values]
+      
+    bar = Bar("Bar chart", "AQI of suzhou in 2016 and 2017")
+    bar.add("2016", attr, v1, mark_line=["average"], mark_point=["max", "min"])
+    bar.add("2017", attr, v2, mark_line=["average"], mark_point=["max", "min"])
+    print('Done')
+    bar.render()
+
+def main():   
+  data ,head =read_sql()
+  draw_Pie(data,head)
+  #draw_Bar(data,head)
+main()
